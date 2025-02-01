@@ -2,7 +2,6 @@
 
 import socket
 import threading
-import sys
 
 class BackDoor():
     def __init__(self):

